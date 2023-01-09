@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import UserInfo from './components/UserInfo'
 import socketClient from "socket.io-client";
 
@@ -54,10 +54,25 @@ const Chatroom = ({  }) => {
   )
 }
 
+let socket = socketClient("http://localhost:8000");
+
 const App = () => {
   let [username, setUsername] = useState('')
   let [drawmode, setDrawmode] = useState(false)
-  //let socket = socketClient("http://localhost:8000")
+
+  useEffect(() => {
+    // socket.on('connect', () => {
+    //   console.log('connection client: ', socket.id)
+    // })
+
+    socket.on('show-words', (data) => {
+      console.log(data.words)
+    })
+
+    return () => {
+      socket.off('connect')
+    }
+  }, [])
 
   let handleUsername = (event) => {
     setUsername(event.target.value)
@@ -67,8 +82,8 @@ const App = () => {
     if (username === '') {
       window.alert("The username must contain at least 1 character")
     } else {
-      let socket = socketClient("http://localhost:8000");
       setDrawmode(true)
+      socket.emit('store-username', {username: username})
     }
   }
 

@@ -16,7 +16,7 @@ const word_bank = [
     "egypt", "planet", "universe", "dandelion", "garbage", "shovel", "telephone"
 ]
 
-let username
+//let username
 let words = serv_lib.pick_three_words(word_bank)
 
 let socket_to_names = {}
@@ -35,15 +35,15 @@ let current_time = round_time
 //------------------------------------------------------------------------------------
 // All website endpoints
 // Home page
-app.get('/', function(req, res) {
-    res.render('index.ejs')
-})
+// app.get('/', function(req, res) {
+//     res.render('index.ejs')
+// })
 
-// Game page
-app.post('/game', urlencoded_parser, function(req, res) {
-    username = req.body.username
-    res.render('game.ejs', {username, words})
-})
+// // Game page
+// app.post('/game', urlencoded_parser, function(req, res) {
+//     username = req.body.username
+//     res.render('game.ejs', {username, words})
+// })
 //------------------------------------------------------------------------------------
 
 let server = app.listen(port)
@@ -51,20 +51,35 @@ let server = app.listen(port)
 let io = socket(server)
 io.on('connection', function(socket) {
     console.log(socket.id)
+
+    socket.on('store-username', function(data) {
+        // Holds the username and points of new socket, and the chat room and player list for other
+        // sockets reflects their connection
+        console.log(data.username)
+        socket_to_names[socket.id] = data.username
+        socket_to_points[socket.id] = 0
+
+        socket.emit('show-words', {words: words})
+        
+        // serv_lib.add_message("<li><b>" + socket_to_names[socket.id] + " has joined." + "</b></li>")
+        // io.sockets.emit('update-player-list', {usernames: Object.values(socket_to_names)})
+        // io.sockets.emit('update-chat-history', {chat_history: serv_lib.chat_history})        
+    })
+    
     //------------------------------------------------------------------------------------
     // Holds the username and points of new socket, and the chat room and player list for other
     // sockets reflects their connection
-    socket_to_names[socket.id] = username
-    socket_to_points[socket.id] = 0
-    serv_lib.add_message("<li><b>" + socket_to_names[socket.id] + " has joined." + "</b></li>")
+    // socket_to_names[socket.id] = username
+    // socket_to_points[socket.id] = 0
+    // serv_lib.add_message("<li><b>" + socket_to_names[socket.id] + " has joined." + "</b></li>")
 
-    io.sockets.emit('update-player-list', {usernames: Object.values(socket_to_names)})
-    io.sockets.emit('update-chat-history', {chat_history: serv_lib.chat_history})
+    // io.sockets.emit('update-player-list', {usernames: Object.values(socket_to_names)})
+    // io.sockets.emit('update-chat-history', {chat_history: serv_lib.chat_history})
 
-    socket_ids = Object.keys(socket_to_names)
-    if (socket.id !== socket_ids[current_socket]) {
-        socket.emit('update-option-values', {words: ["Hidden", "Hidden", "Hidden"]})
-    }
+    // socket_ids = Object.keys(socket_to_names)
+    // if (socket.id !== socket_ids[current_socket]) {
+    //     socket.emit('update-option-values', {words: ["Hidden", "Hidden", "Hidden"]})
+    // }
     //------------------------------------------------------------------------------------
     // A disconnected socket is removed from username and point dictionaries, and the chat room and 
     // player list for remaining sockets reflects their exit
