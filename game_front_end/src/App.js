@@ -2,12 +2,21 @@ import { useState, useEffect } from 'react'
 import UserInfo from './components/UserInfo'
 import socketClient from "socket.io-client";
 
-const PlayerInfo = ({ username }) => {
+const Player = (props) => {
+  return (
+    <li>
+      {props.name}
+    </li>
+  )
+}
+
+const PlayerInfo = ({ username, players }) => {
   return (
     <div className="component players-info">
       <h3 className="heading">Player List</h3>
       <p>Your username is <b>{username}</b></p>
       <ol id="player-list"></ol>
+      { players.map(player => <Player key={player} name={player} />) }
     </div>
   )
 }
@@ -59,21 +68,29 @@ let socket = socketClient("http://localhost:8000");
 const App = () => {
   let [username, setUsername] = useState('')
   let [drawmode, setDrawmode] = useState(false)
+  let [words, setWords] = useState([])
+  let [players, setPlayers] = useState([])
 
   useEffect(() => {
-    // socket.on('connect', () => {
-    //   console.log('connection client: ', socket.id)
-    // })
-
     socket.on('show-words', (data) => {
-      console.log(data.words)
+      handleWords(data.words)
+    })
+
+    socket.on('update-player-list', (data) => {
+      handlePlayers(data.usernames)
     })
 
     return () => {
-      socket.off('connect')
+      socket.off('show-words')
     }
   }, [])
 
+  let handlePlayers = (currentPlayers) => {
+    setPlayers(currentPlayers)
+  }
+  let handleWords = (currentWords) => {
+    setWords(currentWords)
+  }
   let handleUsername = (event) => {
     setUsername(event.target.value)
   }
@@ -90,7 +107,8 @@ const App = () => {
   if (drawmode) {
     return (
       <>
-        <PlayerInfo username={username}/>
+        <PlayerInfo username={username} players={players} />
+        {/* <DrawingCanvas words={words} /> */}
       </>
     )
   }

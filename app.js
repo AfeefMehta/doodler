@@ -62,7 +62,7 @@ io.on('connection', function(socket) {
         socket.emit('show-words', {words: words})
         
         // serv_lib.add_message("<li><b>" + socket_to_names[socket.id] + " has joined." + "</b></li>")
-        // io.sockets.emit('update-player-list', {usernames: Object.values(socket_to_names)})
+        io.sockets.emit('update-player-list', {usernames: Object.values(socket_to_names)})
         // io.sockets.emit('update-chat-history', {chat_history: serv_lib.chat_history})        
     })
     
