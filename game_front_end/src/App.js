@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import UserInfo from './components/UserInfo'
 import socketClient from "socket.io-client";
 
@@ -43,20 +43,83 @@ const Chatroom = ({ chat, message, handleMessage, handleMessageSubmit }) => {
   )
 }
 
-const DrawingCanvas = ({ words }) => {
+let socket = socketClient("http://localhost:8000");
+
+const Color = (props) => {
+  return (
+    <button id={props.color} onClick={props.handlePickColor}></button>
+  )
+}
+
+const DrawingCanvas = ({ words, /*handleMouseDownPaint*/ }) => {
+  let canvasRef = useRef(null)
+  let mouse_held = false
+  let brush_thickness = 2
+  let colors = ["red", "blue", "green", "yellow", "orange", "purple", "brown", "black", "white"]
+  let color = "black"
+  let prevX = 0,
+      prevY = 0,
+      currX = 0,
+      currY = 0
+
+  useEffect(() => {
+    let canvas = canvasRef.current
+    let ctx = canvas.getContext('2d')
+
+    socket.on('paint-start', (data) => {
+      ctx.beginPath();
+      ctx.fillStyle = color;
+      ctx.fillRect(currX, currY, brush_thickness, brush_thickness);
+      ctx.closePath();
+    })
+
+    socket.on('paint-continue', (data) => {
+      ctx.beginPath();
+      ctx.moveTo(prevX, prevY);
+      ctx.lineTo(currX, currY);
+      ctx.strokeStyle = color;
+      ctx.lineWidth = brush_thickness;
+      ctx.stroke();
+      ctx.closePath();
+    })
+  }, [])
+
+  let handleMouseDownPaint = (event) => {
+    prevX = currX
+    prevY = currY
+    currX = event.clientX - event.target.offsetLeft
+    currY = event.clientY - event.target.offsetTop
+
+    mouse_held = true;
+
+    socket.emit('paint-start', {currX: currX, currY: currY, color: color, brush_thickness: brush_thickness})
+  }
+  let handleMouseMovePaint = (event) => {
+    if (mouse_held) {
+      prevX = currX
+      prevY = currY
+      currX = event.clientX - event.target.offsetLeft
+      currY = event.clientY - event.target.offsetTop
+      
+      socket.emit('paint-continue', {prevX: prevX, prevY: prevY, currX: currX, currY: currY, color: color, brush_thickness: brush_thickness})
+    }
+  }
+  let handlePaintClose = (event) => {
+    mouse_held = false
+  }
+  let handlePickColor = (event) => {
+    color = event.target.id
+  }
+
   return (
     <div className="component full-canvas">
-      <canvas id="canvas" height="380" width="640"></canvas><br />
+      <canvas id="canvas" ref={canvasRef} height="380" width="640" 
+        onMouseDown={handleMouseDownPaint} onMouseMove={handleMouseMovePaint} onMouseOut={handlePaintClose} onMouseUp={handlePaintClose}>
+      </canvas><br />
       <div id="color-picker">
-        <button id="red"></button>
-        <button id="blue"></button>
-        <button id="green"></button>
-        <button id="yellow"></button>
-        <button id="orange"></button>
-        <button id="purple"></button>
-        <button id="brown"></button>
-        <button id="black"></button>
-        <button id="white"></button>
+        {
+          colors.map(color => <Color key={color} color={color} handlePickColor={handlePickColor} />)
+        }
       </div>
       <div className="option-picker">
         <button id="option-one">{words[0]}</button>
@@ -72,8 +135,6 @@ const DrawingCanvas = ({ words }) => {
     </div>
   )
 }
-
-let socket = socketClient("http://localhost:8000");
 
 const App = () => {
   let [username, setUsername] = useState('')
@@ -101,6 +162,9 @@ const App = () => {
     }
   }, [])
 
+  // let handleMouseDownPaint = () => {
+  //   socket.emit('paint-start')
+  // }
   let handleChatHistory = (chat) => {
     setChatHistory(chat)
   }
@@ -137,7 +201,7 @@ const App = () => {
     return (
       <>
         <PlayerInfo username={username} players={playerList} />
-        {/* <DrawingCanvas words={words} /> */}
+        <DrawingCanvas words={words} /*handleMouseDownPaint={handleMouseDownPaint}*/ />
         <Chatroom chat={chatHistory} message={message} handleMessage={handleMessage} handleMessageSubmit={handleMessageSubmit} />
       </>
     )
