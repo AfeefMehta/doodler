@@ -21,6 +21,28 @@ const PlayerInfo = ({ username, players }) => {
   )
 }
 
+const Message = ({ message }) => {
+  console.log("yo", message)
+  return (
+    <li>
+      <b>{message}</b>
+    </li>
+  )
+}
+
+const Chatroom = ({ chat }) => {
+  return (
+    <div className="component chatting-area" >
+      <h3 className="heading">Chatroom</h3>
+      <ul id="chat-history"></ul>
+      { chat.map(message => <Message message={message} />) }
+      <label for="message">Enter message: </label>
+      <input id="message" name="message" type="text" />
+      <button id="submit-message">Send message</button>
+    </div>
+  )
+}
+
 const DrawingCanvas = ({ words }) => {
   return (
     <div className="component full-canvas">
@@ -51,33 +73,27 @@ const DrawingCanvas = ({ words }) => {
   )
 }
 
-const Chatroom = ({  }) => {
-  return (
-    <div className="component chatting-area" >
-      <h3 className="heading">Chatroom</h3>
-      <ul id="chat-history"></ul>
-      <label for="message">Enter message: </label>
-      <input id="message" name="message" type="text" />
-      <button id="submit-message">Send message</button>
-    </div>
-  )
-}
-
+console.log('stop it')
 let socket = socketClient("http://localhost:8000");
 
 const App = () => {
   let [username, setUsername] = useState('')
   let [drawmode, setDrawmode] = useState(false)
   let [words, setWords] = useState([])
-  let [players, setPlayers] = useState([])
+  let [playerList, setPlayerList] = useState([])
+  let [chatHistory, setChatHistory] = useState([])
 
   useEffect(() => {
-    socket.on('show-words', (data) => {
+    socket.on('update-option-values', (data) => {
       handleWords(data.words)
     })
 
     socket.on('update-player-list', (data) => {
-      handlePlayers(data.usernames)
+      handlePlayerList(data.usernames)
+    })
+
+    socket.on('update-chat-history', (data) => {
+      handleChatHistory(data.chat_history)
     })
 
     return () => {
@@ -85,8 +101,11 @@ const App = () => {
     }
   }, [])
 
-  let handlePlayers = (currentPlayers) => {
-    setPlayers(currentPlayers)
+  let handleChatHistory = (chat) => {
+    setChatHistory(chat)
+  }
+  let handlePlayerList = (players) => {
+    setPlayerList(players)
   }
   let handleWords = (currentWords) => {
     setWords(currentWords)
@@ -107,8 +126,9 @@ const App = () => {
   if (drawmode) {
     return (
       <>
-        <PlayerInfo username={username} players={players} />
+        <PlayerInfo username={username} players={playerList} />
         {/* <DrawingCanvas words={words} /> */}
+        <Chatroom chat={chatHistory} />
       </>
     )
   }

@@ -55,15 +55,19 @@ io.on('connection', function(socket) {
     socket.on('store-username', function(data) {
         // Holds the username and points of new socket, and the chat room and player list for other
         // sockets reflects their connection
-        console.log(data.username)
         socket_to_names[socket.id] = data.username
         socket_to_points[socket.id] = 0
-
-        socket.emit('show-words', {words: words})
         
-        // serv_lib.add_message("<li><b>" + socket_to_names[socket.id] + " has joined." + "</b></li>")
+        socket_ids = Object.keys(socket_to_names)
+        if (socket.id !== socket_ids[current_socket]) {
+            socket.emit('update-option-values', {words: ["Hidden", "Hidden", "Hidden"]})
+        } else {
+            socket.emit('update-option-values', {words: words})
+        }
+
+        serv_lib.add_message(socket_to_names[socket.id] + " has joined.")
         io.sockets.emit('update-player-list', {usernames: Object.values(socket_to_names)})
-        // io.sockets.emit('update-chat-history', {chat_history: serv_lib.chat_history})        
+        io.sockets.emit('update-chat-history', {chat_history: serv_lib.chat_history})        
     })
     
     //------------------------------------------------------------------------------------
