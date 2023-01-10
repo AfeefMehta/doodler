@@ -22,7 +22,6 @@ const PlayerInfo = ({ username, players }) => {
 }
 
 const Message = ({ message }) => {
-  console.log("yo", message)
   return (
     <li>
       <b>{message}</b>
@@ -30,15 +29,16 @@ const Message = ({ message }) => {
   )
 }
 
-const Chatroom = ({ chat }) => {
+const Chatroom = ({ chat, message, handleMessage, handleMessageSubmit }) => {
   return (
     <div className="component chatting-area" >
       <h3 className="heading">Chatroom</h3>
       <ul id="chat-history"></ul>
       { chat.map(message => <Message message={message} />) }
-      <label for="message">Enter message: </label>
-      <input id="message" name="message" type="text" />
-      <button id="submit-message">Send message</button>
+      <form onSubmit={handleMessageSubmit}>
+        <input type="text" value={message} onChange={handleMessage}></input>
+        <button type="submit">Send</button>
+      </form>
     </div>
   )
 }
@@ -73,7 +73,6 @@ const DrawingCanvas = ({ words }) => {
   )
 }
 
-console.log('stop it')
 let socket = socketClient("http://localhost:8000");
 
 const App = () => {
@@ -82,6 +81,7 @@ const App = () => {
   let [words, setWords] = useState([])
   let [playerList, setPlayerList] = useState([])
   let [chatHistory, setChatHistory] = useState([])
+  let [message, setMessage] = useState('')
 
   useEffect(() => {
     socket.on('update-option-values', (data) => {
@@ -110,10 +110,20 @@ const App = () => {
   let handleWords = (currentWords) => {
     setWords(currentWords)
   }
+
+  let handleMessage = (event) => {
+    setMessage(event.target.value)
+  }
+  let handleMessageSubmit = (event) => {
+    event.preventDefault()
+    setMessage('')
+    socket.emit('update-chat-history', {message: message})
+  }
+
   let handleUsername = (event) => {
     setUsername(event.target.value)
   }
-  let handleSubmit = (event) => {
+  let handleUsernameSubmit = (event) => {
     event.preventDefault()
     if (username === '') {
       window.alert("The username must contain at least 1 character")
@@ -128,13 +138,13 @@ const App = () => {
       <>
         <PlayerInfo username={username} players={playerList} />
         {/* <DrawingCanvas words={words} /> */}
-        <Chatroom chat={chatHistory} />
+        <Chatroom chat={chatHistory} message={message} handleMessage={handleMessage} handleMessageSubmit={handleMessageSubmit} />
       </>
     )
   }
   return (
     <>
-      <UserInfo handleSubmit={handleSubmit} handleUsername={handleUsername} username={username} />
+      <UserInfo handleSubmit={handleUsernameSubmit} handleUsername={handleUsername} username={username} />
     </>
   )
 }

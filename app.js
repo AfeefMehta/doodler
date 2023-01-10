@@ -32,20 +32,6 @@ let correct_guess_players = []
 const round_time = 10
 let current_time = round_time
 
-//------------------------------------------------------------------------------------
-// All website endpoints
-// Home page
-// app.get('/', function(req, res) {
-//     res.render('index.ejs')
-// })
-
-// // Game page
-// app.post('/game', urlencoded_parser, function(req, res) {
-//     username = req.body.username
-//     res.render('game.ejs', {username, words})
-// })
-//------------------------------------------------------------------------------------
-
 let server = app.listen(port)
 
 let io = socket(server)
@@ -69,26 +55,11 @@ io.on('connection', function(socket) {
         io.sockets.emit('update-player-list', {usernames: Object.values(socket_to_names)})
         io.sockets.emit('update-chat-history', {chat_history: serv_lib.chat_history})        
     })
-    
-    //------------------------------------------------------------------------------------
-    // Holds the username and points of new socket, and the chat room and player list for other
-    // sockets reflects their connection
-    // socket_to_names[socket.id] = username
-    // socket_to_points[socket.id] = 0
-    // serv_lib.add_message("<li><b>" + socket_to_names[socket.id] + " has joined." + "</b></li>")
-
-    // io.sockets.emit('update-player-list', {usernames: Object.values(socket_to_names)})
-    // io.sockets.emit('update-chat-history', {chat_history: serv_lib.chat_history})
-
-    // socket_ids = Object.keys(socket_to_names)
-    // if (socket.id !== socket_ids[current_socket]) {
-    //     socket.emit('update-option-values', {words: ["Hidden", "Hidden", "Hidden"]})
-    // }
     //------------------------------------------------------------------------------------
     // A disconnected socket is removed from username and point dictionaries, and the chat room and 
     // player list for remaining sockets reflects their exit
     socket.on('disconnect', function() {
-        serv_lib.add_message("<li><b>" + socket_to_names[socket.id] + " has left." + "</b></li>")
+        serv_lib.add_message(socket_to_names[socket.id] + " has left.")
         delete socket_to_names[socket.id]
         delete socket_to_points[socket.id]
 
@@ -100,13 +71,13 @@ io.on('connection', function(socket) {
     // All sockets update their chat history when any client sends a message
     socket.on('update-chat-history', function(data) {
         // A guessing user must guess correctly and also can't keep repeating the correct word to receive points
-        if (socket.id !== socket_ids[current_socket] && data.message === chosen_word && correct_guess_players.indexOf(socket.id) < 0) {
-            serv_lib.add_message("<li><i>" + socket_to_names[socket.id] + " guessed the word correctly!" + "</i></li>")
-            socket_to_points[socket.id] += (5 * current_time)
-            correct_guess_players.push(socket.id)
-        } else {
-            serv_lib.add_message("<li>" + socket_to_names[socket.id] + ": " + data.message + "</li>")
-        }
+        // if (socket.id !== socket_ids[current_socket] && data.message === chosen_word && correct_guess_players.indexOf(socket.id) < 0) {
+        //     serv_lib.add_message("<li><i>" + socket_to_names[socket.id] + " guessed the word correctly!" + "</i></li>")
+        //     socket_to_points[socket.id] += (5 * current_time)
+        //     correct_guess_players.push(socket.id)
+        // } else {
+            serv_lib.add_message(socket_to_names[socket.id] + ": " + data.message)
+        // }
         io.sockets.emit('update-chat-history', {chat_history: serv_lib.chat_history})
     })
     //-----------------------------------------------------------------------------------
