@@ -129,14 +129,14 @@ io.on('connection', function(socket) {
     //-----------------------------------------------------------------------------------------
     // These serve as gatekeepers, only allowing the current socket to draw
     socket.on('paint-start', function(data) {
-        if (socket.id === socket_ids[current_socket] && option_picked) {
+        //if (socket.id === socket_ids[current_socket] && option_picked) {
             io.sockets.emit('paint-start', data)
-        }
+        //}
     })
     socket.on('paint-continue', function(data) {
-        if (socket.id === socket_ids[current_socket] && option_picked) {
+        //if (socket.id === socket_ids[current_socket] && option_picked) {
             io.sockets.emit('paint-continue', data)
-        }
+        //}
     })
     //-----------------------------------------------------------------------------------------
 })
