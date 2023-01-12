@@ -51,16 +51,28 @@ const Color = (props) => {
   )
 }
 
-const DrawingCanvas = ({ words, /*handleMouseDownPaint*/ }) => {
-  let canvasRef = useRef(null)
-  let mouse_held = false
-  let brush_thickness = 2
+const DrawingCanvas = ({ words }) => {
+  let [mouseHeld, setMouseHeld] = useState(false)
+  let [initialRender, setInitialRender] = useState(true)
+  let [prevXY, setPrevXY] = useState({X: 0, Y: 0})
+  let [currXY, setCurrXY] = useState({X: 0, Y: 0})
+  let [color, setColor] = useState('black')
+  let [brushSize, setBrushSize] = useState(2)
+
   let colors = ["red", "blue", "green", "yellow", "orange", "purple", "brown", "black", "white"]
-  let color = "black"
-  let prevX = 0,
-      prevY = 0,
-      currX = 0,
-      currY = 0
+
+  let canvasRef = useRef(null)
+
+  useEffect(() => {
+    if (initialRender) {
+      toggleInitialRender()
+    } else if (!mouseHeld) {
+      socket.emit('paint-start', {currXY: currXY, brushSize: brushSize, color: color})
+      toggleMouseHeld()
+    } else {
+      socket.emit('paint-continue', {prevXY: prevXY, currXY: currXY, brushSize: brushSize, color: color})
+    }
+  }, [currXY])
 
   useEffect(() => {
     let canvas = canvasRef.current
@@ -68,47 +80,43 @@ const DrawingCanvas = ({ words, /*handleMouseDownPaint*/ }) => {
 
     socket.on('paint-start', (data) => {
       ctx.beginPath();
-      ctx.fillStyle = color;
-      ctx.fillRect(currX, currY, brush_thickness, brush_thickness);
+      ctx.fillStyle = data.color;
+      ctx.fillRect(data.currXY.X, data.currXY.Y, data.brushSize, data.brushSize);
       ctx.closePath();
     })
 
     socket.on('paint-continue', (data) => {
       ctx.beginPath();
-      ctx.moveTo(prevX, prevY);
-      ctx.lineTo(currX, currY);
-      ctx.strokeStyle = color;
-      ctx.lineWidth = brush_thickness;
+      ctx.moveTo(data.prevXY.X, data.prevXY.Y);
+      ctx.lineTo(data.currXY.X, data.currXY.Y);
+      ctx.strokeStyle = data.color;
+      ctx.lineWidth = data.brushSize;
       ctx.stroke();
       ctx.closePath();
     })
   }, [])
 
+  let toggleInitialRender = () => {
+    setInitialRender(!initialRender)
+  }
+  let toggleMouseHeld = () => {
+    setMouseHeld(!mouseHeld)
+  }
   let handleMouseDownPaint = (event) => {
-    prevX = currX
-    prevY = currY
-    currX = event.clientX - event.target.offsetLeft
-    currY = event.clientY - event.target.offsetTop
-
-    mouse_held = true;
-
-    socket.emit('paint-start', {currX: currX, currY: currY, color: color, brush_thickness: brush_thickness})
+    setPrevXY({X: currXY.X, Y: currXY.Y})
+    setCurrXY({X: event.clientX - event.target.offsetLeft, Y: event.clientY - event.target.offsetTop})
   }
   let handleMouseMovePaint = (event) => {
-    if (mouse_held) {
-      prevX = currX
-      prevY = currY
-      currX = event.clientX - event.target.offsetLeft
-      currY = event.clientY - event.target.offsetTop
-      
-      socket.emit('paint-continue', {prevX: prevX, prevY: prevY, currX: currX, currY: currY, color: color, brush_thickness: brush_thickness})
+    if (mouseHeld) {
+      setPrevXY({X: currXY.X, Y: currXY.Y})
+      setCurrXY({X: event.clientX - event.target.offsetLeft, Y: event.clientY - event.target.offsetTop})
     }
   }
-  let handlePaintClose = (event) => {
-    mouse_held = false
+  let handlePaintClose = () => {
+    setMouseHeld(false)
   }
   let handlePickColor = (event) => {
-    color = event.target.id
+    setColor(event.target.id)
   }
 
   return (
@@ -162,9 +170,6 @@ const App = () => {
     }
   }, [])
 
-  // let handleMouseDownPaint = () => {
-  //   socket.emit('paint-start')
-  // }
   let handleChatHistory = (chat) => {
     setChatHistory(chat)
   }
@@ -201,7 +206,7 @@ const App = () => {
     return (
       <>
         <PlayerInfo username={username} players={playerList} />
-        <DrawingCanvas words={words} /*handleMouseDownPaint={handleMouseDownPaint}*/ />
+        <DrawingCanvas words={words} />
         <Chatroom chat={chatHistory} message={message} handleMessage={handleMessage} handleMessageSubmit={handleMessageSubmit} />
       </>
     )
