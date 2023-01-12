@@ -106,7 +106,7 @@ io.on('connection', function(socket) {
                     // the winner is calculated and displayed
                     if (current_socket === socket_ids.length - 1) {
                         current_socket = 0
-                        serv_lib.add_message("<li>" + serv_lib.calculate_winner_message(socket_to_points, socket_to_names) + "</li>")
+                        serv_lib.add_message(serv_lib.calculate_winner_message(socket_to_points, socket_to_names))
                         io.sockets.emit('update-chat-history', {chat_history: serv_lib.chat_history})
                     } else {
                         current_socket++

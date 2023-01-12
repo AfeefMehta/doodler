@@ -51,6 +51,12 @@ const Color = (props) => {
   )
 }
 
+const Word = (props) => {
+  return (
+    <button id={props.word} onClick={props.handlePickWord}>{props.word}</button>
+  )
+}
+
 const DrawingCanvas = ({ words }) => {
   let [mouseHeld, setMouseHeld] = useState(false)
   let [initialRender, setInitialRender] = useState(true)
@@ -58,6 +64,9 @@ const DrawingCanvas = ({ words }) => {
   let [currXY, setCurrXY] = useState({X: 0, Y: 0})
   let [color, setColor] = useState('black')
   let [brushSize, setBrushSize] = useState(2)
+  let [chosenWord, setChosenWord] = useState('')
+  let [chosenStatement, setChosenStatement] = useState('')
+  let [timerStatement, setTimerStatement] = useState('')
 
   let colors = ["red", "blue", "green", "yellow", "orange", "purple", "brown", "black", "white"]
 
@@ -68,11 +77,17 @@ const DrawingCanvas = ({ words }) => {
       toggleInitialRender()
     } else if (!mouseHeld) {
       socket.emit('paint-start', {currXY: currXY, brushSize: brushSize, color: color})
-      toggleMouseHeld()
+      handleMouseOn()
     } else {
       socket.emit('paint-continue', {prevXY: prevXY, currXY: currXY, brushSize: brushSize, color: color})
     }
   }, [currXY])
+
+  useEffect(() => {
+    if (!initialRender) {
+      socket.emit('update-option-choice', {choice: chosenWord})
+    }
+  }, [chosenWord])
 
   useEffect(() => {
     let canvas = canvasRef.current
@@ -94,35 +109,69 @@ const DrawingCanvas = ({ words }) => {
       ctx.stroke();
       ctx.closePath();
     })
+
+    socket.on('update-option-choice', (data) => {
+      handleChosenStatement(data.choice)
+    })
+
+    socket.on('update-timer', (data) => {
+      handleTimerStatement(data.time_message)
+    })
+
+    socket.on('clear-choice-and-timer', () => {
+      handleClearStatements()
+    })
+
+    socket.on('round-end', () => {
+      socket.emit('give-words')
+    })
+
+    socket.on('paint-clear', () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height)
+    })
   }, [])
 
+  let handleClearStatements = () => {
+    setChosenStatement('')
+    setTimerStatement('')
+  }
+  let handleTimerStatement = (statement) => {
+    setTimerStatement(statement)
+  }
+  let handleChosenStatement = (statement) => {
+    setChosenStatement(statement)
+  }
   let toggleInitialRender = () => {
     setInitialRender(!initialRender)
-  }
-  let toggleMouseHeld = () => {
-    setMouseHeld(!mouseHeld)
   }
   let handleMouseDownPaint = (event) => {
     setPrevXY({X: currXY.X, Y: currXY.Y})
     setCurrXY({X: event.clientX - event.target.offsetLeft, Y: event.clientY - event.target.offsetTop})
   }
+
   let handleMouseMovePaint = (event) => {
     if (mouseHeld) {
       setPrevXY({X: currXY.X, Y: currXY.Y})
       setCurrXY({X: event.clientX - event.target.offsetLeft, Y: event.clientY - event.target.offsetTop})
     }
   }
-  let handlePaintClose = () => {
+  let handleMouseOff = () => {
     setMouseHeld(false)
+  }
+  let handleMouseOn = () => {
+    setMouseHeld(true)
   }
   let handlePickColor = (event) => {
     setColor(event.target.id)
+  }
+  let handlePickWord = (event) => {
+    setChosenWord(event.target.id)
   }
 
   return (
     <div className="component full-canvas">
       <canvas id="canvas" ref={canvasRef} height="380" width="640" 
-        onMouseDown={handleMouseDownPaint} onMouseMove={handleMouseMovePaint} onMouseOut={handlePaintClose} onMouseUp={handlePaintClose}>
+        onMouseDown={handleMouseDownPaint} onMouseMove={handleMouseMovePaint} onMouseOut={handleMouseOff} onMouseUp={handleMouseOff}>
       </canvas><br />
       <div id="color-picker">
         {
@@ -130,15 +179,15 @@ const DrawingCanvas = ({ words }) => {
         }
       </div>
       <div className="option-picker">
-        <button id="option-one">{words[0]}</button>
-        <button id="option-two">{words[1]}</button>
-        <button id="option-three">{words[2]}</button>
+        {
+          words.map(word => <Word key={word} word={word} handlePickWord={handlePickWord} />)
+        }
       </div>
       <div className="clock-area">
-        <p id="clock"></p>
+        <p id="clock">{timerStatement}</p>
       </div>
       <div className="choice-area">
-        <p id="choice"></p>
+        <p id="choice">{chosenStatement}</p>
       </div>
     </div>
   )
