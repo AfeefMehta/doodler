@@ -1,13 +1,8 @@
 const express = require('express')
 const socket = require('socket.io')
-const body_parser = require('body-parser')
-let urlencoded_parser = body_parser.urlencoded({ extended: true })
 const serv_lib = require('./serv_lib')
 
 let app = express()
-
-app.set('view engine', 'ejs')
-app.use('/assets', express.static('assets'))
 
 const port = 8000
 const word_bank = [
@@ -16,12 +11,13 @@ const word_bank = [
     "egypt", "planet", "universe", "dandelion", "garbage", "shovel", "telephone"
 ]
 
-//let username
 let words = serv_lib.pick_three_words(word_bank)
 
 let socket_to_names = {}
 let socket_to_points = {}
 let socket_ids
+
+let timer
 
 let option_picked = false
 
@@ -35,6 +31,29 @@ let current_time = round_time
 let server = app.listen(port)
 
 let io = socket(server)
+
+let round_finish = (disconnect) => {
+    // Reset round affected data
+    option_picked = false
+    correct_guess_players = []
+    current_time = round_time
+    clearInterval(timer)
+    io.sockets.emit('clear-choice-and-timer')
+    // The next socket in the list is given its turn and if all sockets have had a turn,
+    // the winner is calculated and displayed
+    if (current_socket === socket_ids.length - 1) {
+        current_socket = 0
+        serv_lib.add_message(serv_lib.calculate_winner_message(socket_to_points, socket_to_names))
+        io.sockets.emit('update-chat-history', {chat_history: serv_lib.chat_history})
+    } else {
+        if (!disconnect) {
+            current_socket++
+        }
+    }
+    io.sockets.emit('paint-clear')
+    io.sockets.emit('round-end')
+}
+
 io.on('connection', function(socket) {
     console.log(socket.id)
 
@@ -63,6 +82,10 @@ io.on('connection', function(socket) {
         delete socket_to_names[socket.id]
         delete socket_to_points[socket.id]
 
+        if (socket.id === socket_ids[current_socket]) {
+            round_finish(true)
+        }
+
         io.sockets.emit('update-player-list', {usernames: Object.values(socket_to_names)})
         io.sockets.emit('update-chat-history', {chat_history: serv_lib.chat_history})
         socket_ids = Object.keys(socket_to_names)
@@ -71,13 +94,13 @@ io.on('connection', function(socket) {
     // All sockets update their chat history when any client sends a message
     socket.on('update-chat-history', function(data) {
         // A guessing user must guess correctly and also can't keep repeating the correct word to receive points
-        // if (socket.id !== socket_ids[current_socket] && data.message === chosen_word && correct_guess_players.indexOf(socket.id) < 0) {
-        //     serv_lib.add_message("<li><i>" + socket_to_names[socket.id] + " guessed the word correctly!" + "</i></li>")
-        //     socket_to_points[socket.id] += (5 * current_time)
-        //     correct_guess_players.push(socket.id)
-        // } else {
+        if (socket.id !== socket_ids[current_socket] && data.message === chosen_word && correct_guess_players.indexOf(socket.id) < 0) {
+            serv_lib.add_message(socket_to_names[socket.id] + " guessed the word correctly!")
+            socket_to_points[socket.id] += (5 * current_time)
+            correct_guess_players.push(socket.id)
+        } else {
             serv_lib.add_message(socket_to_names[socket.id] + ": " + data.message)
-        // }
+        }
         io.sockets.emit('update-chat-history', {chat_history: serv_lib.chat_history})
     })
     //-----------------------------------------------------------------------------------
@@ -91,28 +114,12 @@ io.on('connection', function(socket) {
             
             // Notifies clients initially and at every step of the countdown
             io.sockets.emit('update-timer', {time_message: socket_to_names[socket.id] + " has " + current_time + " seconds left..."})
-            let timer = setInterval(function() {
+            timer = setInterval(function() {
                 current_time -= 1
                 io.sockets.emit('update-timer', {time_message: socket_to_names[socket.id] + " has " + current_time + " seconds left..."})
 
                 if (current_time === 0) {
-                    // Reset round affected data
-                    option_picked = false
-                    correct_guess_players = []
-                    current_time = round_time
-                    clearInterval(timer)
-                    io.sockets.emit('clear-choice-and-timer')
-                    // The next socket in the list is given its turn and if all sockets have had a turn,
-                    // the winner is calculated and displayed
-                    if (current_socket === socket_ids.length - 1) {
-                        current_socket = 0
-                        serv_lib.add_message(serv_lib.calculate_winner_message(socket_to_points, socket_to_names))
-                        io.sockets.emit('update-chat-history', {chat_history: serv_lib.chat_history})
-                    } else {
-                        current_socket++
-                    }
-                    io.sockets.emit('paint-clear')
-                    io.sockets.emit('round-end')
+                    round_finish(false)
                 }
             }, 1000)
         }
@@ -120,23 +127,24 @@ io.on('connection', function(socket) {
     //-----------------------------------------------------------------------------------------
     // Gives words to sockets after previous round ends
     socket.on('give-words', () => {
-        socket.emit('update-option-values', {words: ["Hidden", "Hidden", "Hidden"]})
         if (socket.id === socket_ids[current_socket]) {
             words = serv_lib.pick_three_words(word_bank)
             socket.emit('update-option-values', {words})
+        } else {
+            socket.emit('update-option-values', {words: ["Hidden", "Hidden", "Hidden"]})
         }
     })
     //-----------------------------------------------------------------------------------------
     // These serve as gatekeepers, only allowing the current socket to draw
     socket.on('paint-start', function(data) {
-        //if (socket.id === socket_ids[current_socket] && option_picked) {
+        if (socket.id === socket_ids[current_socket] && option_picked) {
             io.sockets.emit('paint-start', data)
-        //}
+        }
     })
     socket.on('paint-continue', function(data) {
-        //if (socket.id === socket_ids[current_socket] && option_picked) {
+        if (socket.id === socket_ids[current_socket] && option_picked) {
             io.sockets.emit('paint-continue', data)
-        //}
+        }
     })
     //-----------------------------------------------------------------------------------------
 })

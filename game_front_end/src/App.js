@@ -71,6 +71,7 @@ const DrawingCanvas = ({ words }) => {
   let colors = ["red", "blue", "green", "yellow", "orange", "purple", "brown", "black", "white"]
 
   let canvasRef = useRef(null)
+  let optionsRef = useRef(null)
 
   useEffect(() => {
     if (initialRender) {
@@ -86,6 +87,7 @@ const DrawingCanvas = ({ words }) => {
   useEffect(() => {
     if (!initialRender) {
       socket.emit('update-option-choice', {choice: chosenWord})
+      console.log(optionsRef.current.innerHTML)
     }
   }, [chosenWord])
 
@@ -165,7 +167,9 @@ const DrawingCanvas = ({ words }) => {
     setColor(event.target.id)
   }
   let handlePickWord = (event) => {
-    setChosenWord(event.target.id)
+    if (event.target.id !== "Hidden") {
+      setChosenWord(event.target.id)
+    }
   }
 
   return (
@@ -178,10 +182,11 @@ const DrawingCanvas = ({ words }) => {
           colors.map(color => <Color key={color} color={color} handlePickColor={handlePickColor} />)
         }
       </div>
-      <div className="option-picker">
+      <div className="option-picker" ref={optionsRef}>
         {
-          words.map(word => <Word key={word} word={word} handlePickWord={handlePickWord} />)
+          words.map(word => <Word word={word} handlePickWord={handlePickWord} />)
         }
+        { }
       </div>
       <div className="clock-area">
         <p id="clock">{timerStatement}</p>
@@ -213,10 +218,6 @@ const App = () => {
     socket.on('update-chat-history', (data) => {
       handleChatHistory(data.chat_history)
     })
-
-    return () => {
-      socket.off('show-words')
-    }
   }, [])
 
   let handleChatHistory = (chat) => {
