@@ -1,50 +1,12 @@
 import { useState, useEffect, useRef } from 'react'
 import UserInfo from './components/UserInfo'
 import PlayerInfo from './components/PlayerInfo'
+import Chatroom from './components/Chatroom';
+import Color from './components/Color'
+import Word from './components/Word'
 import socketClient from "socket.io-client";
 
 let socket = socketClient("http://localhost:8000");
-
-const Message = ({ message }) => {
-  return (
-    <li>
-      <b>{message}</b>
-    </li>
-  )
-}
-
-const Chatroom = ({ chat, message, handleMessage, handleMessageSubmit }) => {
-  let messageID = 0
-
-  return (
-    <div className="component chatting-area" >
-      <h3 className="heading">Chatroom</h3>
-      <ul id="chat-history"></ul>
-      { chat.map(message => 
-        {
-          messageID++
-          return (<Message key={messageID} message={message} />)
-        }) 
-      }
-      <form onSubmit={handleMessageSubmit}>
-        <input type="text" value={message} onChange={handleMessage}></input>
-        <button type="submit">Send</button>
-      </form>
-    </div>
-  )
-}
-
-const Color = (props) => {
-  return (
-    <button id={props.color} onClick={props.handlePickColor}></button>
-  )
-}
-
-const Word = (props) => {
-  return (
-    <button id={props.word} onClick={props.handlePickWord}>{props.word}</button>
-  )
-}
 
 const DrawingCanvas = ({ words }) => {
   let [mouseHeld, setMouseHeld] = useState(false)
