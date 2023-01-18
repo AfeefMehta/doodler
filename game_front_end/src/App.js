@@ -1,27 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
 import UserInfo from './components/UserInfo'
+import PlayerInfo from './components/PlayerInfo'
 import socketClient from "socket.io-client";
 
 let socket = socketClient("http://localhost:8000");
-
-const Player = (props) => {
-  return (
-    <li>
-      {props.name}
-    </li>
-  )
-}
-
-const PlayerInfo = ({ username, players }) => {
-  return (
-    <div className="component players-info">
-      <h3 className="heading">Player List</h3>
-      <p>Your username is <b>{username}</b></p>
-      <ol id="player-list"></ol>
-      { players.map(player => <Player key={player} name={player} />) }
-    </div>
-  )
-}
 
 const Message = ({ message }) => {
   return (
@@ -87,7 +69,6 @@ const DrawingCanvas = ({ words }) => {
   useEffect(() => {
     if (!initialRender) {
       socket.emit('update-option-choice', {choice: chosenWord})
-      console.log(optionsRef.current.innerHTML)
     }
   }, [chosenWord])
 
@@ -186,7 +167,6 @@ const DrawingCanvas = ({ words }) => {
         {
           words.map(word => <Word word={word} handlePickWord={handlePickWord} />)
         }
-        { }
       </div>
       <div className="clock-area">
         <p id="clock">{timerStatement}</p>
@@ -218,6 +198,14 @@ const App = () => {
     socket.on('update-chat-history', (data) => {
       handleChatHistory(data.chat_history)
     })
+
+    socket.on('username-occupied', () => {
+      window.alert('username in use already')
+    })
+
+    socket.on('username-accepted', () => {
+      handleDrawMode()
+    })
   }, [])
 
   let handleChatHistory = (chat) => {
@@ -228,6 +216,10 @@ const App = () => {
   }
   let handleWords = (currentWords) => {
     setWords(currentWords)
+  }
+  
+  let handleDrawMode = () => {
+    setDrawmode(true)
   }
 
   let handleMessage = (event) => {
@@ -247,8 +239,7 @@ const App = () => {
     if (username === '') {
       window.alert("The username must contain at least 1 character")
     } else {
-      setDrawmode(true)
-      socket.emit('store-username', {username: username})
+      socket.emit('check-username', {username: username})
     }
   }
 

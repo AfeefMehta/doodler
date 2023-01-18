@@ -57,29 +57,33 @@ let roundFinish = (disconnect) => {
 io.on('connection', function(socket) {
     console.log(socket.id)
 
-    socket.on('store-username', function(data) {
-        // Holds the username and points of new socket, and the chat room and player list for other
-        // sockets reflects their connection
-        socketToInfo[socket.id] = { name: data.username, points: 0}
-        socketIDs = Object.keys(socketToInfo)
-
-        if (socket.id !== socketIDs[currSocket]) {
-            socket.emit('update-option-values', {words: ["Hidden", "Hidden", "Hidden"]})
+    socket.on('check-username', function(data) {
+        if (Object.values(socketToInfo).map((info) => info.name).includes(data.username)) {
+            socket.emit('username-occupied')
         } else {
-            socket.emit('update-option-values', {words: words})
+            socket.emit('username-accepted')
+            socketToInfo[socket.id] = { name: data.username, points: 0}
+            socketIDs = Object.keys(socketToInfo)
+    
+            if (socket.id !== socketIDs[currSocket]) {
+                socket.emit('update-option-values', {words: ["Hidden", "Hidden", "Hidden"]})
+            } else {
+                socket.emit('update-option-values', {words: words})
+            }
+    
+            addMessage(socketToInfo[socket.id].name + " has joined.")
+    
+            let usernames = []
+            let info = Object.values(socketToInfo)
+            info.forEach((info) => {
+                usernames.push(info.name)
+            })
+    
+            io.sockets.emit('update-player-list', {usernames: Object.values(socketToInfo).map((info) => info.name) })
+            io.sockets.emit('update-chat-history', {chat_history: chat})  
         }
-
-        addMessage(socketToInfo[socket.id].name + " has joined.")
-
-        let usernames = []
-        let info = Object.values(socketToInfo)
-        info.forEach((info) => {
-            usernames.push(info.name)
-        })
-
-        io.sockets.emit('update-player-list', {usernames: Object.values(socketToInfo).map((info) => info.name) })
-        io.sockets.emit('update-chat-history', {chat_history: chat})        
     })
+    
     //------------------------------------------------------------------------------------
     // A disconnected socket is removed from username and point dictionaries, and the chat room and 
     // player list for remaining sockets reflects their exit

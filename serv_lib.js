@@ -38,7 +38,7 @@ const generateWinnerMessage = (socketToInfo) => {
 
     let winnerMessage = ''
     for (let i = 0; i < sortedPlayers.length; i++) {
-        let message = "#" + (i + 1).toString() + ": " + sortedPlayers[i].name + ", " + sortedPlayers[i].points.toString() + " points. <br />"
+        let message = "#" + (i + 1).toString() + ": " + sortedPlayers[i].name + ", " + sortedPlayers[i].points.toString() + " points."
         winnerMessage += message
     }
 
