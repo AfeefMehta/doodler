@@ -14,11 +14,18 @@ const Message = ({ message }) => {
 }
 
 const Chatroom = ({ chat, message, handleMessage, handleMessageSubmit }) => {
+  let messageID = 0
+
   return (
     <div className="component chatting-area" >
       <h3 className="heading">Chatroom</h3>
       <ul id="chat-history"></ul>
-      { chat.map(message => <Message message={message} />) }
+      { chat.map(message => 
+        {
+          messageID++
+          return (<Message key={messageID} message={message} />)
+        }) 
+      }
       <form onSubmit={handleMessageSubmit}>
         <input type="text" value={message} onChange={handleMessage}></input>
         <button type="submit">Send</button>
@@ -49,6 +56,7 @@ const DrawingCanvas = ({ words }) => {
   let [chosenWord, setChosenWord] = useState('')
   let [chosenStatement, setChosenStatement] = useState('')
   let [timerStatement, setTimerStatement] = useState('')
+  let wordID = 0
 
   let colors = ["red", "blue", "green", "yellow", "orange", "purple", "brown", "black", "white"]
 
@@ -165,7 +173,11 @@ const DrawingCanvas = ({ words }) => {
       </div>
       <div className="option-picker" ref={optionsRef}>
         {
-          words.map(word => <Word word={word} handlePickWord={handlePickWord} />)
+          words.map(word => 
+            {
+              wordID++
+              return (<Word key = {wordID} word={word} handlePickWord={handlePickWord} />)
+            })
         }
       </div>
       <div className="clock-area">
@@ -217,7 +229,7 @@ const App = () => {
   let handleWords = (currentWords) => {
     setWords(currentWords)
   }
-  
+
   let handleDrawMode = () => {
     setDrawmode(true)
   }
