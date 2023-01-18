@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from 'react'
 import UserInfo from './components/UserInfo'
 import socketClient from "socket.io-client";
 
+let socket = socketClient("http://localhost:8000");
+
 const Player = (props) => {
   return (
     <li>
@@ -42,8 +44,6 @@ const Chatroom = ({ chat, message, handleMessage, handleMessageSubmit }) => {
     </div>
   )
 }
-
-let socket = socketClient("http://localhost:8000");
 
 const Color = (props) => {
   return (
