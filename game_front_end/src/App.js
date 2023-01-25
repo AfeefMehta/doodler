@@ -20,7 +20,7 @@ const DrawingCanvas = ({ words }) => {
   let [timerStatement, setTimerStatement] = useState('')
   let wordID = 0
 
-  let colors = ["red", "blue", "green", "yellow", "orange", "purple", "brown", "black", "white"]
+  let colors = ["red", "blue", "green", "yellow", "orange", "cyan", "purple", "brown", "black", "white"]
 
   let canvasRef = useRef(null)
   let optionsRef = useRef(null)
@@ -124,16 +124,15 @@ const DrawingCanvas = ({ words }) => {
   }
 
   return (
-    <div className="component full-canvas">
-      <canvas id="canvas" ref={canvasRef} height="380" width="640" 
-        onMouseDown={handleMouseDownPaint} onMouseMove={handleMouseMovePaint} onMouseOut={handleMouseOff} onMouseUp={handleMouseOff}>
+    <div className="full-canvas">
+      <canvas ref={canvasRef} onMouseDown={handleMouseDownPaint} onMouseMove={handleMouseMovePaint} onMouseOut={handleMouseOff} onMouseUp={handleMouseOff}>
       </canvas><br />
       <div id="color-picker">
         {
           colors.map(color => <Color key={color} color={color} handlePickColor={handlePickColor} />)
         }
       </div>
-      <div className="option-picker" ref={optionsRef}>
+      <div className="option-picker text" ref={optionsRef}>
         {
           words.map(word => 
             {
@@ -142,10 +141,10 @@ const DrawingCanvas = ({ words }) => {
             })
         }
       </div>
-      <div className="clock-area">
+      <div className="clock-area text">
         <p id="clock">{timerStatement}</p>
       </div>
-      <div className="choice-area">
+      <div className="choice-area text">
         <p id="choice">{chosenStatement}</p>
       </div>
     </div>
@@ -219,11 +218,11 @@ const App = () => {
 
   if (drawmode) {
     return (
-      <>
+      <div id="play-area">
         <PlayerInfo username={username} players={playerList} />
         <DrawingCanvas words={words} />
         <Chatroom chat={chatHistory} message={message} handleMessage={handleMessage} handleMessageSubmit={handleMessageSubmit} />
-      </>
+      </div>
     )
   }
   return (

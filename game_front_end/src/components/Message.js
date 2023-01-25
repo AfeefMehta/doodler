@@ -1,9 +1,14 @@
-const Message = ({ message }) => {
-    return (
-      <li>
-        <b>{message}</b>
-      </li>
-    )
+const Message = ({ counter, message }) => {
+  let backgroundColor = 'lighter'
+  if (counter % 2 === 0) {
+    backgroundColor = 'darker'
+  }
+
+  return (
+    <li className={backgroundColor}>
+      <b>{message}</b>
+    </li>
+  )
 }
 
 export default Message

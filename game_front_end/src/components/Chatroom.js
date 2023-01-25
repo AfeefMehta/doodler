@@ -4,18 +4,19 @@ const Chatroom = ({ chat, message, handleMessage, handleMessageSubmit }) => {
     let messageID = 0
   
     return (
-      <div className="component chatting-area" >
-        <h3 className="heading">Chatroom</h3>
-        <ul id="chat-history"></ul>
-        { chat.map(message => 
-          {
-            messageID++
-            return (<Message key={messageID} message={message} />)
-          }) 
-        }
+      <div className="chatting-area text" >
+        <h3>Chatroom</h3>
+        <ul id="chat-history">
+          { chat.map(message => 
+            {
+              messageID++
+              return (<Message key={messageID} counter={messageID} message={message} />)
+            }) 
+          }
+        </ul>
         <form onSubmit={handleMessageSubmit}>
-          <input type="text" value={message} onChange={handleMessage}></input>
-          <button type="submit">Send</button>
+          <input className="text" type="text" value={message} onChange={handleMessage}></input>
+          <button className="text" type="submit">Send</button>
         </form>
       </div>
     )
