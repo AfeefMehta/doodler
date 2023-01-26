@@ -125,7 +125,8 @@ const DrawingCanvas = ({ words }) => {
 
   return (
     <div className="full-canvas">
-      <canvas ref={canvasRef} onMouseDown={handleMouseDownPaint} onMouseMove={handleMouseMovePaint} onMouseOut={handleMouseOff} onMouseUp={handleMouseOff}>
+      <canvas ref={canvasRef} width="800px" height="400px"
+        onMouseDown={handleMouseDownPaint} onMouseMove={handleMouseMovePaint} onMouseOut={handleMouseOff} onMouseUp={handleMouseOff}>
       </canvas><br />
       <div id="color-picker">
         {
