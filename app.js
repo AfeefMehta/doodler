@@ -1,6 +1,6 @@
 const express = require('express')
 const socket = require('socket.io')
-const { generateWords, generateWinnerMessage, addMessage, chat, chatLimit } = require('./serv_lib')
+const { generateWords, generateWinnerMessage, addMessage } = require('./serv_lib')
 
 let app = express()
 
@@ -27,6 +27,9 @@ let correctGuessers = []
 
 const roundTime = 10
 let currTime = roundTime
+
+let maxLobbies = 10
+let lobbies = {}
 
 let server = app.listen(port)
 
@@ -62,27 +65,39 @@ io.on('connection', function(socket) {
             socket.emit('username-occupied')
         } else {
             socket.emit('username-accepted')
-            socket.join('room-one')
-            socketToInfo[socket.id] = { name: data.username, points: 0}
-            socketIDs = Object.keys(socketToInfo)
+            // socketToInfo[socket.id] = { name: data.username, points: 0 }
+            // socketIDs = Object.keys(socketToInfo)
     
-            if (socket.id !== socketIDs[currSocket]) {
-                socket.emit('update-option-values', {words: ["Hidden", "Hidden", "Hidden"]})
-            } else {
-                socket.emit('update-option-values', {words: words})
-            }
+            // if (socket.id !== socketIDs[currSocket]) {
+            //     socket.emit('update-option-values', {words: ["Hidden", "Hidden", "Hidden"]})
+            // } else {
+            //     socket.emit('update-option-values', {words: words})
+            // }
     
-            addMessage(socketToInfo[socket.id].name + " has joined.")
+            // addMessage(socketToInfo[socket.id].name + " has joined.")
     
-            let usernames = []
-            let info = Object.values(socketToInfo)
-            info.forEach((info) => {
-                usernames.push(info.name)
-            })
-    
-            io.sockets.emit('update-player-list', {usernames: Object.values(socketToInfo).map((info) => info.name) })
-            io.sockets.emit('update-chat-history', {chat_history: chat})  
+            // io.sockets.emit('update-player-list', {usernames: Object.values(socketToInfo).map((info) => info.name) })
+            // io.sockets.emit('update-chat-history', {chat_history: chat})  
         }
+    })
+
+    socket.on('create-lobby', function(data) {
+        socket.join(data.name)
+
+        lobbies[data.name] = {
+            numOptions: data.numOptions,
+            turnTime: data.turnTime,
+            chat: [],
+            currentPlayer: 0,
+            players: [{ name: data.username, points: 0 , id: socket.id}]
+        }
+
+        socket.emit('update-option-values', {words: generateWords(wordBank, numWords)})
+
+        io.to(data.name).emit('update-player-list', {usernames: data.username})
+        
+        addMessage(data.username + " has joined.", lobbies[data.name].chat)
+        io.to(data.name).emit('update-chat-history', {chat_history: lobbies[data.name].chat})
     })
     
     //------------------------------------------------------------------------------------

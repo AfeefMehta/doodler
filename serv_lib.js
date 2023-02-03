@@ -1,5 +1,5 @@
 let chatLimit = 25
-let chat = []
+//let chat = []
 
 // generates a given number of words randomly from a given word bank
 const generateWords = (wordBank, numWords) => {
@@ -45,11 +45,11 @@ const generateWinnerMessage = (socketToInfo) => {
     return winnerMessage
 }
 
-const addMessage = (message) => {
+const addMessage = (message, chat) => {
     if (chat.length === chatLimit) {
         chat.shift()
     }
     chat.push(message)
 }
 
-module.exports = { generateWords, generateWinnerMessage, addMessage, chat, chatLimit }
+module.exports = { generateWords, generateWinnerMessage, addMessage }

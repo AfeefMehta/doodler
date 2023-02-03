@@ -152,9 +152,11 @@ const DrawingCanvas = ({ words }) => {
   )
 }
 
-const NewLobbyForm = ({ handleLobbyOptions, handleLobbyRoundTime, handleNewLobby }) => {
+const NewLobbyForm = ({ handleLobbyName, handleLobbyOptions, handleLobbyRoundTime, handleNewLobby }) => {
   return (
     <div>
+      <p>Enter Lobby Name:</p>
+      <input type="text" onChange={handleLobbyName}></input>
       <p>Number of word options for drawer:</p>
       <input type="number" max="4" min="1" onChange={handleLobbyOptions} placeholder="3"></input>
       <p>Time per drawer:</p>
@@ -169,6 +171,7 @@ const App = () => {
   let [drawmode, setDrawmode] = useState(false)
 
   let [lobbymode, setLobbymode] = useState(false)
+  let [lobbyName, setLobbyName] = useState('')
   let [lobbyOptions, setLobbyOptions] = useState(3)
   let [lobbyRoundTime, setLobbyRoundTime] = useState(60)
 
@@ -216,6 +219,9 @@ const App = () => {
     setDrawmode(true)
   }
 
+  let handleLobbyName = (event) => {
+    setLobbyName(event.target.value)
+  }
   let handleLobbyOptions = (event) => {
     setLobbyOptions(event.target.value)
   }
@@ -223,7 +229,8 @@ const App = () => {
     setLobbyRoundTime(event.target.value)
   }
   let handleNewLobby = () => {
-    socket.emit('create-lobby', {numOptions: lobbyOptions, roundTime: lobbyRoundTime})
+    socket.emit('create-lobby', {name: lobbyName, numOptions: lobbyOptions, turnTime: lobbyRoundTime, username: username})
+    setDrawmode(true)
   }
 
   let handleMessage = (event) => {
@@ -258,7 +265,7 @@ const App = () => {
   } else if (lobbymode) {
     return (
       <div>
-        <NewLobbyForm handleLobbyOptions={handleLobbyOptions} handleLobbyRoundTime={handleLobbyRoundTime} handleNewLobby={handleNewLobby} />
+        <NewLobbyForm handleLobbyName={handleLobbyName} handleLobbyOptions={handleLobbyOptions} handleLobbyRoundTime={handleLobbyRoundTime} handleNewLobby={handleNewLobby} />
       </div>
     )
   } else {
