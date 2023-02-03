@@ -152,9 +152,26 @@ const DrawingCanvas = ({ words }) => {
   )
 }
 
+const NewLobbyForm = ({ handleLobbyOptions, handleLobbyRoundTime, handleNewLobby }) => {
+  return (
+    <div>
+      <p>Number of word options for drawer:</p>
+      <input type="number" max="4" min="1" onChange={handleLobbyOptions} placeholder="3"></input>
+      <p>Time per drawer:</p>
+      <input type="number" max="300" min="1" onChange={handleLobbyRoundTime} placeholder="60"></input>
+      <button onClick={handleNewLobby}>Create</button>
+    </div>
+  )
+}
+
 const App = () => {
   let [username, setUsername] = useState('')
   let [drawmode, setDrawmode] = useState(false)
+
+  let [lobbymode, setLobbymode] = useState(false)
+  let [lobbyOptions, setLobbyOptions] = useState(3)
+  let [lobbyRoundTime, setLobbyRoundTime] = useState(60)
+
   let [words, setWords] = useState([])
   let [playerList, setPlayerList] = useState([])
   let [chatHistory, setChatHistory] = useState([])
@@ -178,7 +195,7 @@ const App = () => {
     })
 
     socket.on('username-accepted', () => {
-      handleDrawMode()
+      handleLobbyMode()
     })
   }, [])
 
@@ -192,8 +209,21 @@ const App = () => {
     setWords(currentWords)
   }
 
+  let handleLobbyMode = () => {
+    setLobbymode(true)
+  }
   let handleDrawMode = () => {
     setDrawmode(true)
+  }
+
+  let handleLobbyOptions = (event) => {
+    setLobbyOptions(event.target.value)
+  }
+  let handleLobbyRoundTime = (event) => {
+    setLobbyRoundTime(event.target.value)
+  }
+  let handleNewLobby = () => {
+    socket.emit('create-lobby', {numOptions: lobbyOptions, roundTime: lobbyRoundTime})
   }
 
   let handleMessage = (event) => {
@@ -225,12 +255,19 @@ const App = () => {
         <Chatroom chat={chatHistory} message={message} handleMessage={handleMessage} handleMessageSubmit={handleMessageSubmit} />
       </div>
     )
+  } else if (lobbymode) {
+    return (
+      <div>
+        <NewLobbyForm handleLobbyOptions={handleLobbyOptions} handleLobbyRoundTime={handleLobbyRoundTime} handleNewLobby={handleNewLobby} />
+      </div>
+    )
+  } else {
+    return (
+      <>
+        <UserInfo handleSubmit={handleUsernameSubmit} handleUsername={handleUsername} username={username} />
+      </> 
+    )
   }
-  return (
-    <>
-      <UserInfo handleSubmit={handleUsernameSubmit} handleUsername={handleUsername} username={username} />
-    </>
-  )
 }
 
 export default App;

@@ -62,6 +62,7 @@ io.on('connection', function(socket) {
             socket.emit('username-occupied')
         } else {
             socket.emit('username-accepted')
+            socket.join('room-one')
             socketToInfo[socket.id] = { name: data.username, points: 0}
             socketIDs = Object.keys(socketToInfo)
     
