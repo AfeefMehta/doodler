@@ -19,14 +19,10 @@ const generateWords = (wordBank, numWords) => {
 }
 
 // generates the message for player rankings at the end of the round
-const generateWinnerMessage = (socketToInfo) => {
-    let sortedPlayers = []
-    let players = Object.keys(socketToInfo)
+const generateWinnerMessage = (players) => {
+    let playersCopy = players.map(player => player)
 
-    for (let i = 0; i < players.length; i++) {
-        sortedPlayers.push(socketToInfo[players[i]])
-    }
-    sortedPlayers.sort((a, b) => {
+    playersCopy.sort((a, b) => {
         if (a.points < b.points) {
             return 1
         } else if (a.points > b.points) {
@@ -37,8 +33,8 @@ const generateWinnerMessage = (socketToInfo) => {
     })
 
     let winnerMessage = ''
-    for (let i = 0; i < sortedPlayers.length; i++) {
-        let message = "#" + (i + 1).toString() + ": " + sortedPlayers[i].name + ", " + sortedPlayers[i].points.toString() + " points."
+    for (let i = 0; i < playersCopy.length; i++) {
+        let message = "#" + (i + 1).toString() + ": " + playersCopy[i].name + ", " + playersCopy[i].points.toString() + " points. "
         winnerMessage += message
     }
 

@@ -200,6 +200,10 @@ const App = () => {
     socket.on('username-accepted', () => {
       handleLobbyMode()
     })
+
+    socket.on('lobby-created', () => {
+      handleDrawMode()
+    })
   }, [])
 
   let handleChatHistory = (chat) => {
@@ -230,7 +234,6 @@ const App = () => {
   }
   let handleNewLobby = () => {
     socket.emit('create-lobby', {name: lobbyName, numOptions: lobbyOptions, turnTime: lobbyRoundTime, username: username})
-    setDrawmode(true)
   }
 
   let handleMessage = (event) => {

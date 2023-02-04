@@ -35,26 +35,27 @@ let server = app.listen(port)
 
 let io = socket(server)
 
-let roundFinish = (disconnect) => {
+let roundFinish = (disconnect, lobbyName) => {
+    let lobby = lobbies[lobbyName]
     // Reset round affected data
-    optionPicked = false
-    correctGuessers = []
-    currTime = roundTime
-    clearInterval(timer)
-    io.sockets.emit('clear-choice-and-timer')
+    lobby.optionPicked = false
+    lobby.correctGuessers = []
+    lobby.currTime = lobby.turnTime
+    //clearInterval(timer)
+    io.to(lobbyName).emit('clear-choice-and-timer')
     // The next socket in the list is given its turn and if all sockets have had a turn,
     // the winner is calculated and displayed
-    if (currSocket === socketIDs.length - 1) {
-        currSocket = 0
-        addMessage(generateWinnerMessage(socketToInfo))
-        io.sockets.emit('update-chat-history', {chat_history: chat})
+    if (lobby.currentPlayer === lobby.players.length - 1) {
+        lobby.currentPlayer = 0
+        addMessage(generateWinnerMessage(lobby.players), lobby.chat)
+        io.to(lobbyName).emit('update-chat-history', {chat_history: lobby.chat})
     } else {
         if (!disconnect) {
-            currSocket++
+            lobby.currentPlayer++
         }
     }
-    io.sockets.emit('paint-clear')
-    io.sockets.emit('round-end')
+    io.to(lobbyName).emit('paint-clear')
+    io.to(lobbyName).emit('round-end')
 }
 
 io.on('connection', function(socket) {
@@ -87,34 +88,66 @@ io.on('connection', function(socket) {
         lobbies[data.name] = {
             numOptions: data.numOptions,
             turnTime: data.turnTime,
+            currTime: data.turnTime,
             chat: [],
             currentPlayer: 0,
+            optionPicked: false,
+            correctGuessers: [],
             players: [{ name: data.username, points: 0 , id: socket.id}]
         }
 
         socket.emit('update-option-values', {words: generateWords(wordBank, numWords)})
 
-        io.to(data.name).emit('update-player-list', {usernames: data.username})
+        io.to(data.name).emit('update-player-list', {usernames: [data.username]})
         
         addMessage(data.username + " has joined.", lobbies[data.name].chat)
         io.to(data.name).emit('update-chat-history', {chat_history: lobbies[data.name].chat})
+
+        io.to(data.name).emit('lobby-created')
     })
     
     //------------------------------------------------------------------------------------
     // A disconnected socket is removed from username and point dictionaries, and the chat room and 
     // player list for remaining sockets reflects their exit
-    socket.on('disconnect', function() {
-        addMessage(socketToInfo[socket.id].name + " has left.")
-        delete socketToInfo[socket.id]
+    socket.on('disconnecting', function() {
+        Object.keys(lobbies).forEach(lobbyName => {
+            if (Object.values(socket.rooms).includes(lobbyName)) {
+                let socketName
+                for (let i = 0; i < lobbies[lobbyName].players.length; i++) {
+                    if (socket.id === lobbies[lobbyName].players[i].id) {
+                        socketName = lobbies[lobbyName].players[i].name
+                        if (lobbies[lobbyName].currentPlayer === i) {
+                            roundFinish(true, lobbyName)
+                        }
+                        lobbies[lobbyName].players.splice(i, 1)
+                        break
+                    }
+                }
 
-        if (socket.id === socketIDs[currSocket]) {
-            roundFinish(true)
-        }
+                let lobbyUsers = []
+                lobbies[lobbyName].players.forEach((player) => {
+                    lobbyUsers.concat(player.name)
+                })
 
-        io.sockets.emit('update-player-list', {usernames: Object.values(socketToInfo).map((info) => info.name) })
-        io.sockets.emit('update-chat-history', {chat_history: chat})
-        socketIDs = Object.keys(socketToInfo)
+                addMessage(socketName + " has left.", lobbies[lobbyName].chat)
+                io.to(lobbyName).emit('update-player-list', {usernames: lobbyUsers})
+                io.to(lobbyName).emit('update-chat-history', {chat_history: lobbies[lobbyName].chat})
+            }
+        })
     })
+
+    // socket.on('disconnect', function() {
+    //     addMessage(socketToInfo[socket.id].name + " has left.")
+    //     delete socketToInfo[socket.id]
+
+    //     if (socket.id === socketIDs[currSocket]) {
+    //         roundFinish(true)
+    //     }
+
+    //     io.sockets.emit('update-player-list', {usernames: Object.values(socketToInfo).map((info) => info.name) })
+    //     io.sockets.emit('update-chat-history', {chat_history: chat})
+    //     socketIDs = Object.keys(socketToInfo)
+    // })
     //------------------------------------------------------------------------------------
     // All sockets update their chat history when any client sends a message
     socket.on('update-chat-history', function(data) {
