@@ -30,6 +30,7 @@ let currTime = roundTime
 
 let maxLobbies = 10
 let lobbies = {}
+let socketToLobby = {}
 
 let server = app.listen(port)
 
@@ -92,8 +93,15 @@ io.on('connection', function(socket) {
             chat: [],
             currentPlayer: 0,
             optionPicked: false,
+            chosenWord: '',
             correctGuessers: [],
-            players: [{ name: data.username, points: 0 , id: socket.id}]
+            players: [{ name: data.username, points: 0, id: socket.id}]
+        }
+
+        socketToLobby[socket.id] = {
+            lobbyName: data.name,
+            name: data.username,
+            points: 0
         }
 
         socket.emit('update-option-values', {words: generateWords(wordBank, numWords)})
@@ -134,6 +142,8 @@ io.on('connection', function(socket) {
                 io.to(lobbyName).emit('update-chat-history', {chat_history: lobbies[lobbyName].chat})
             }
         })
+
+        delete socketToLobby[socket.id]
     })
 
     // socket.on('disconnect', function() {
@@ -151,15 +161,22 @@ io.on('connection', function(socket) {
     //------------------------------------------------------------------------------------
     // All sockets update their chat history when any client sends a message
     socket.on('update-chat-history', function(data) {
+        let lobby = lobbies[socketToLobby[socket.id].lobbyName]
         // A guessing user must guess correctly and also can't keep repeating the correct word to receive points
-        if (socket.id !== socketIDs[currSocket] && data.message === chosenWord && correctGuessers.indexOf(socket.id) < 0) {
-            addMessage(socketToInfo[socket.id].name + " guessed the word correctly!")
-            socketToInfo[socket.id].points += (5 * currTime)
-            correctGuessers.push(socket.id)
+        if (socket.id !== lobby.players[lobby.currentPlayer].id && data.message === lobby.chosenWord && lobby.correctGuessers.indexOf(socket.id) < 0) {
+            addMessage(socketToLobby[socket.id].name + " guessed the word correctly!", lobby.chat)
+            socketToLobby.points += (5 * currTime)
+            for (let i = 0; i < lobby.players.length; i++) {
+                if (lobby.players[i].id === socket.id) {
+                    lobby.players[i].points += (5 * currTime)
+                }
+            }
+            socketToLobby[socket.id].points += (5 * currTime)
+            lobby.correctGuessers.push(socket.id)
         } else {
-            addMessage(socketToInfo[socket.id].name + ": " + data.message)
+            addMessage(socketToLobby[socket.id].name + ": " + data.message, lobby.chat)
         }
-        io.sockets.emit('update-chat-history', {chat_history: chat})
+        io.to(socketToLobby[socket.id].lobbyName).emit('update-chat-history', {chat_history: lobby.chat})
     })
     //-----------------------------------------------------------------------------------
     // All sockets are notified when the current socket has picked a word and a countdown starts
