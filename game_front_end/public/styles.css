@@ -5,6 +5,7 @@ html, body, #root {
     margin: 0;
     padding-top: 0.5%;
     box-sizing: border-box;
+    font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
 }
 
 #home-component {
@@ -45,7 +46,6 @@ html, body, #root {
 }
  
 .text {
-    font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
     font-size: 20px;
 }
 
@@ -221,4 +221,45 @@ canvas {
     width: 100%;
     height: 5%;
     text-align: center;
+}
+
+.lobbyForm {
+    background-color: #8bc07b;
+    display: grid;
+    grid-template-columns: auto auto auto;
+    gap: 10%;
+    padding: 3% 5%;
+}
+
+.lobbySubmit {
+    grid-column-start: 2;
+    grid-column-end: 3;
+    margin-top: 2%;
+    background-color: rgb(6, 160, 88);
+    border: 0px;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 20px;
+}
+
+.lobbyList {
+    background-color: #8bc07b;
+    margin: auto;
+    height: 100%;
+    width: 80%;
+    padding: 2%;
+}
+
+.lobby {
+    font-size: 20px;
+    padding: 2%;
+}
+
+.lobbyJoin {
+    background-color: rgb(6, 160, 88);
+    border: 0px;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 20px;
+    float: right;
 }

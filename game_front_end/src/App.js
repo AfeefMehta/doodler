@@ -4,6 +4,8 @@ import PlayerInfo from './components/PlayerInfo'
 import Chatroom from './components/Chatroom';
 import Color from './components/Color'
 import Word from './components/Word'
+import NewLobbyForm from './components/NewLobbyForm'
+import LobbyList from './components/LobbyList'
 import socketClient from "socket.io-client";
 
 let socket = socketClient("http://localhost:8000");
@@ -152,36 +154,37 @@ const DrawingCanvas = ({ words }) => {
   )
 }
 
-const NewLobbyForm = ({ handleLobbyName, handleLobbyOptions, handleLobbyRoundTime, handleNewLobby }) => {
-  return (
-    <div>
-      <p>Enter Lobby Name:</p>
-      <input type="text" onChange={handleLobbyName}></input>
-      <p>Number of word options for drawer:</p>
-      <input type="number" max="4" min="1" onChange={handleLobbyOptions} placeholder="3"></input>
-      <p>Time per drawer:</p>
-      <input type="number" max="300" min="1" onChange={handleLobbyRoundTime} placeholder="60"></input>
-      <button onClick={handleNewLobby}>Create</button>
-    </div>
-  )
-}
-
 const App = () => {
   let [username, setUsername] = useState('')
-  let [drawmode, setDrawmode] = useState(false)
 
   let [lobbymode, setLobbymode] = useState(false)
+  let [drawmode, setDrawmode] = useState(false)
+
   let [lobbyName, setLobbyName] = useState('')
-  let [lobbyOptions, setLobbyOptions] = useState(3)
+  let [lobbyNumWords, setLobbyNumWords] = useState(3)
   let [lobbyRoundTime, setLobbyRoundTime] = useState(60)
+
+  let [lobbyList, setLobbyList] = useState()
 
   let [words, setWords] = useState([])
   let [playerList, setPlayerList] = useState([])
-  let [chatHistory, setChatHistory] = useState([])
+  let [chat, setChat] = useState([])
   let [message, setMessage] = useState('')
 
   useEffect(() => {
-    socket.on('update-option-values', (data) => {
+    socket.on('username-occupied', () => {
+      window.alert('username in use already')
+    })
+
+    socket.on('username-accepted', (lobbies) => {
+      handleLobbyMode(lobbies.lobbies)
+    })
+
+    socket.on('draw-ready', () => {
+      handleDrawMode()
+    })
+
+    socket.on('update-word-values', (data) => {
       handleWords(data.words)
     })
 
@@ -190,33 +193,24 @@ const App = () => {
     })
 
     socket.on('update-chat-history', (data) => {
-      handleChatHistory(data.chat_history)
-    })
-
-    socket.on('username-occupied', () => {
-      window.alert('username in use already')
-    })
-
-    socket.on('username-accepted', () => {
-      handleLobbyMode()
-    })
-
-    socket.on('lobby-created', () => {
-      handleDrawMode()
+      handleChat(data.chat)
     })
   }, [])
 
-  let handleChatHistory = (chat) => {
-    setChatHistory(chat)
+  let handleUsername = (event) => {
+    setUsername(event.target.value)
   }
-  let handlePlayerList = (players) => {
-    setPlayerList(players)
-  }
-  let handleWords = (currentWords) => {
-    setWords(currentWords)
+  let handleUsernameSubmit = (event) => {
+    event.preventDefault()
+    if (username.length < 1) {
+      window.alert("The username must contain at least 1 character")
+    } else {
+      socket.emit('check-username', {username})
+    }
   }
 
-  let handleLobbyMode = () => {
+  let handleLobbyMode = (lobbies) => {
+    setLobbyList(lobbies)
     setLobbymode(true)
   }
   let handleDrawMode = () => {
@@ -226,14 +220,37 @@ const App = () => {
   let handleLobbyName = (event) => {
     setLobbyName(event.target.value)
   }
-  let handleLobbyOptions = (event) => {
-    setLobbyOptions(event.target.value)
+  let handleLobbyNumWords = (event) => {
+    setLobbyNumWords(event.target.value)
   }
   let handleLobbyRoundTime = (event) => {
     setLobbyRoundTime(event.target.value)
   }
-  let handleNewLobby = () => {
-    socket.emit('create-lobby', {name: lobbyName, numOptions: lobbyOptions, turnTime: lobbyRoundTime, username: username})
+  let handleCreateLobby = () => {
+    console.log(lobbyName)
+    if (lobbyNumWords < 1 || lobbyNumWords > 4) {
+      window.alert('invalid value for number of words')
+    } else if (lobbyRoundTime < 5 || lobbyRoundTime > 300) {
+      window.alert('invalid value for round time')
+    } else if (lobbyName.length < 1) {
+      window.alert('lobby name must be at least 1 character')
+    } else {
+      socket.emit('create-lobby', {lobbyName, lobbyNumWords, lobbyRoundTime, username})
+    }
+  }
+
+  let handleJoinLobby = (event) => {
+    socket.emit('join-lobby', {lobbyName: event.target.id, username})
+  }
+
+  let handleChat = (chat) => {
+    setChat(chat)
+  }
+  let handlePlayerList = (players) => {
+    setPlayerList(players)
+  }
+  let handleWords = (currentWords) => {
+    setWords(currentWords)
   }
 
   let handleMessage = (event) => {
@@ -242,19 +259,7 @@ const App = () => {
   let handleMessageSubmit = (event) => {
     event.preventDefault()
     setMessage('')
-    socket.emit('update-chat-history', {message: message})
-  }
-
-  let handleUsername = (event) => {
-    setUsername(event.target.value)
-  }
-  let handleUsernameSubmit = (event) => {
-    event.preventDefault()
-    if (username === '') {
-      window.alert("The username must contain at least 1 character")
-    } else {
-      socket.emit('check-username', {username: username})
-    }
+    socket.emit('update-chat-history', {message})
   }
 
   if (drawmode) {
@@ -262,13 +267,14 @@ const App = () => {
       <div id="play-area">
         <PlayerInfo username={username} players={playerList} />
         <DrawingCanvas words={words} />
-        <Chatroom chat={chatHistory} message={message} handleMessage={handleMessage} handleMessageSubmit={handleMessageSubmit} />
+        <Chatroom chat={chat} message={message} handleMessage={handleMessage} handleMessageSubmit={handleMessageSubmit} />
       </div>
     )
   } else if (lobbymode) {
     return (
       <div>
-        <NewLobbyForm handleLobbyName={handleLobbyName} handleLobbyOptions={handleLobbyOptions} handleLobbyRoundTime={handleLobbyRoundTime} handleNewLobby={handleNewLobby} />
+        <NewLobbyForm handleLobbyName={handleLobbyName} handleLobbyNumWords={handleLobbyNumWords} handleLobbyRoundTime={handleLobbyRoundTime} handleCreateLobby={handleCreateLobby} />
+        <LobbyList lobbyList={lobbyList} handleJoinLobby={handleJoinLobby} />
       </div>
     )
   } else {
