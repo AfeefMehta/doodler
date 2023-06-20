@@ -1,6 +1,6 @@
 const express = require('express')
 const socket = require('socket.io')
-const { generateWords, generateWinnerMessage, addMessage } = require('./serv_lib')
+const { generateWords, generateWinnerMessage, addMessage } = require('./helper')
 
 const port = 8000
 const wordBank = [
@@ -9,53 +9,57 @@ const wordBank = [
     "egypt", "planet", "universe", "dandelion", "garbage", "shovel", "telephone"
 ]
 
-let maxLobbies = 10
 let lobbies = {}
-let socketToLobby = {}
+let socketInfo = {}
 
 let app = express()
 let server = app.listen(port)
 let io = socket(server)
 
-let roundFinish = (disconnect, lobbyName) => {
-    let lobby = lobbies[lobbyName]
-    // Reset round affected data
+let roundFinish = (disconnect, lobby) => {
+    // reset round affected properties in lobby
     lobby.optionPicked = false
     lobby.correctGuessers = []
     lobby.currTime = lobby.turnTime
     clearInterval(lobby.timer)
-    io.to(lobbyName).emit('clear-choice-and-timer')
-    // The next socket in the list is given its turn and if all sockets have had a turn,
-    // the winner is calculated and displayed
+    io.to(lobby.name).emit('clear-choice-and-timer')
+
+    // gives final score once all players have drawn or skips player if they disconnect
     if (lobby.currentPlayer === lobby.players.length - 1) {
         lobby.currentPlayer = 0
         addMessage(generateWinnerMessage(lobby.players), lobby.chat)
-        io.to(lobbyName).emit('update-chat-history', {chat_history: lobby.chat})
+        io.to(lobby.name).emit('update-chat-history', {chat: lobby.chat})
     } else {
         if (!disconnect) {
             lobby.currentPlayer++
         }
     }
-    io.to(lobbyName).emit('paint-clear')
-    io.to(lobbyName).emit('round-end')
+
+    // update client with blank canvas and new round
+    io.to(lobby.name).emit('paint-clear')
+    io.to(lobby.name).emit('round-end')
 }
 
 io.on('connection', function(socket) {
     console.log(socket.id)
 
+    //------------------------------------------------------------------------------------
+    // checks if username has already joined server currently
     socket.on('check-username', function(data) {
-        if (Object.values(socketToLobby).map((info) => info.name).includes(data.username)) {
+        if (Object.values(socketInfo).map((info) => info.username).includes(data.username)) {
             socket.emit('username-occupied')
         } else {
-            console.log(lobbies)
             socket.emit('username-accepted', {lobbies}) 
         }
     })
 
+    //------------------------------------------------------------------------------------
+    // initializes a lobby with given properties and adds user to it
     socket.on('create-lobby', function(data) {
         socket.join(data.lobbyName)
 
         lobbies[data.lobbyName] = {
+            name: data.lobbyName,
             numOptions: data.lobbyNumWords,
             turnTime: data.lobbyRoundTime,
             currTime: data.lobbyRoundTime,
@@ -65,15 +69,16 @@ io.on('connection', function(socket) {
             optionPicked: false,
             chosenWord: '',
             correctGuessers: [],
-            players: [{ name: data.username, points: 0, id: socket.id}]
+            players: [{ username: data.username, points: 0, id: socket.id}]
         }
 
-        socketToLobby[socket.id] = {
+        socketInfo[socket.id] = {
             lobbyName: data.lobbyName,
-            name: data.username,
+            username: data.username,
             points: 0
         }
 
+        // update player list and chat for client
         socket.emit('update-option-values', {words: generateWords(wordBank, data.lobbyNumWords)})
         io.to(data.lobbyName).emit('update-player-list', {usernames: [data.username]})
         
@@ -83,18 +88,21 @@ io.on('connection', function(socket) {
         io.to(data.lobbyName).emit('draw-ready')
     })
 
+    //------------------------------------------------------------------------------------
+    // keeps track of user in new lobby internally
     socket.on('join-lobby', function(data) {
         socket.join(data.lobbyName)
-        lobbies[data.lobbyName].players.push({name: data.username, points: 0, id: socket.id})
+        lobbies[data.lobbyName].players.push({username: data.username, points: 0, id: socket.id})
 
-        socketToLobby[socket.id] = {
+        socketInfo[socket.id] = {
             lobbyName: data.lobbyName,
-            name: data.username,
+            username: data.username,
             points: 0
         }
 
+        // update player list and chat for client
         socket.emit('update-option-values', {words: ['Hidden', 'Hidden', 'Hidden']})
-        io.to(data.lobbyName).emit('update-player-list', {usernames: Object.values(socketToLobby).map((info) => info.name)})
+        io.to(data.lobbyName).emit('update-player-list', {usernames: lobbies[data.lobbyName].players.map(player => player.username)})
         
         addMessage(data.username + " has joined.", lobbies[data.lobbyName].chat)
         io.to(data.lobbyName).emit('update-chat-history', {chat: lobbies[data.lobbyName].chat})
@@ -103,86 +111,93 @@ io.on('connection', function(socket) {
     })
     
     //------------------------------------------------------------------------------------
-    // A disconnected socket is removed from username and point dictionaries, and the chat room and 
-    // player list for remaining sockets reflects their exit
+    // a disconnected socket is removed from the player list for the respective lobby
     socket.on('disconnecting', function() {
-        Object.keys(lobbies).forEach(lobbyName => {
-            if (Object.values(socket.rooms).includes(lobbyName)) {
-                if (lobbies[lobbyName].players.length === 1) {
-                    delete lobbies[lobbyName]
-                } else {
-                    let socketName
-                    for (let i = 0; i < lobbies[lobbyName].players.length; i++) {
-                        if (socket.id === lobbies[lobbyName].players[i].id) {
-                            socketName = lobbies[lobbyName].players[i].name
-                            if (lobbies[lobbyName].currentPlayer === i) {
-                                roundFinish(true, lobbyName)
-                            }
-                            lobbies[lobbyName].players.splice(i, 1)
-                            break
-                        }
+
+        let lobby = lobbies[socketInfo[socket.id].lobbyName]
+        let socketName = socketInfo[socket.id].username
+
+        // delete lobby if the only player leaves
+        if (lobby.players.length === 1) {
+            delete lobbies[lobby.name]
+
+        } else {
+            // lobby removes player from player list
+            for (let i = 0; i < lobby.players.length; i++) {
+                if (socket.id === lobby.players[i].id) {
+                    if (lobby.currentPlayer === i) {
+                        roundFinish(true, lobby)
                     }
-
-                    let lobbyUsers = []
-                    lobbies[lobbyName].players.forEach((player) => {
-                        lobbyUsers.concat(player.name)
-                    })
-
-                    addMessage(socketName + " has left.", lobbies[lobbyName].chat)
-                    io.to(lobbyName).emit('update-player-list', {usernames: lobbyUsers})
-                    io.to(lobbyName).emit('update-chat-history', {chat_history: lobbies[lobbyName].chat})
+                    lobby.players.splice(i, 1)
                 }
             }
-        })
 
-        delete socketToLobby[socket.id]
+            // update lobby on client side
+            addMessage(socketName + " has left.", lobby.chat)
+            io.to(lobby.name).emit('update-player-list', {usernames: lobby.players.map(player => player.username)})
+            io.to(lobby.name).emit('update-chat-history', {chat: lobby.chat})
+        }
+
+        delete socketInfo[socket.id]
     })
 
     //------------------------------------------------------------------------------------
-    // All sockets update their chat history when any client sends a message
+    // all sockets update their chat history when any client sends a message
     socket.on('update-chat-history', function(data) {
-        let lobby = lobbies[socketToLobby[socket.id].lobbyName]
-        // A guessing user must guess correctly and also can't keep repeating the correct word to receive points
+        let lobby = lobbies[socketInfo[socket.id].lobbyName]
+        let socketName = socketInfo[socket.id].username
+
+        // a non-drawing user must guess right and can't keep guessing to get points
         if (socket.id !== lobby.players[lobby.currentPlayer].id && data.message === lobby.chosenWord && lobby.correctGuessers.indexOf(socket.id) < 0) {
-            addMessage(socketToLobby[socket.id].name + " guessed the word correctly!", lobby.chat)
-            socketToLobby[socket.id].points += (5 * lobby.currTime)
+            addMessage(socketName + " guessed the word correctly!", lobby.chat)
+            socketInfo[socket.id].points += (5 * lobby.currTime)
+
             for (let i = 0; i < lobby.players.length; i++) {
                 if (lobby.players[i].id === socket.id) {
                     lobby.players[i].points += (5 * lobby.currTime)
                 }
             }
             lobby.correctGuessers.push(socket.id)
+
+        // just sending a regular message
         } else {
-            addMessage(socketToLobby[socket.id].name + ": " + data.message, lobby.chat)
+            addMessage(socketInfo[socket.id].username + ": " + data.message, lobby.chat)
         }
-        io.to(socketToLobby[socket.id].lobbyName).emit('update-chat-history', {chat_history: lobby.chat})
+
+        // update clients chatbox
+        io.to(socketInfo[socket.id].lobbyName).emit('update-chat-history', {chat: lobby.chat})
     })
+
     //-----------------------------------------------------------------------------------
-    // All sockets are notified when the current socket has picked a word and a countdown starts
+    // all lobby users are notified and the round starts when the drawer has selected a word
     socket.on('update-option-choice', function(data) {
-        let lobby = lobbies[socketToLobby[socket.id].lobbyName]
+        let lobby = lobbies[socketInfo[socket.id].lobbyName]
+
+        // When the drawing user picks a word, it changes the instructions for each connected user
         if (socket.id === lobby.players[lobby.currentPlayer].id && !lobby.optionPicked) {
             lobby.optionPicked = true
             lobby.chosenWord = data.choice
-            socket.emit('update-option-choice', {choice: "You picked to draw " + lobby.chosenWord + "."})
-            socket.to(socketToLobby[socket.id].lobbyName).emit('update-option-choice', {choice: "Guess the word!"})
+            socket.emit('update-option-choice', {choice: "You have to draw \"" + lobby.chosenWord + "\"."})
+            socket.to(socketInfo[socket.id].lobbyName).emit('update-option-choice', {choice: "Guess the word!"})
             
-            // Notifies clients initially and at every step of the countdown
-            io.to(socketToLobby[socket.id].lobbyName).emit('update-timer', {time_message: socketToLobby[socket.id].name + " has " + lobby.currTime + " seconds left..."})
+            // notifies clients of lobby at every step of the countdown
+            io.to(socketInfo[socket.id].lobbyName).emit('update-timer', {timeMessage: socketInfo[socket.id].name + " has " + lobby.currTime + " seconds left..."})
             lobby.timer = setInterval(function() {
                 lobby.currTime -= 1
-                io.to(socketToLobby[socket.id].lobbyName).emit('update-timer', {time_message: socketToLobby[socket.id].name + " has " + lobby.currTime + " seconds left..."})
+                io.to(socketInfo[socket.id].lobbyName).emit('update-timer', {timeMessage: socketInfo[socket.id].name + " has " + lobby.currTime + " seconds left..."})
 
                 if (lobby.currTime === 0) {
-                    roundFinish(false, socketToLobby[socket.id].lobbyName)
+                    roundFinish(false, lobby)
                 }
             }, 1000)
         }
     })
+
     //-----------------------------------------------------------------------------------------
-    // Gives words to sockets after previous round ends
+    // gives a new set of words to the next user after the current round ends
     socket.on('give-words', () => {
-        let lobby = lobbies[socketToLobby[socket.id].lobbyName]
+        let lobby = lobbies[socketInfo[socket.id].lobbyName]
+
         if (socket.id === lobby.players[lobby.currentPlayer].id) {
             let words = generateWords(wordBank, numWords)
             socket.emit('update-option-values', {words})
@@ -190,19 +205,22 @@ io.on('connection', function(socket) {
             socket.emit('update-option-values', {words: ["Hidden", "Hidden", "Hidden"]})
         }
     })
+
     //-----------------------------------------------------------------------------------------
-    // These serve as gatekeepers, only allowing the current socket to draw
+    // these callback functions serve as gatekeepers, only allowing the correct user to draw
     socket.on('paint-start', function(data) {
-        let lobby = lobbies[socketToLobby[socket.id].lobbyName]
+        let lobby = lobbies[socketInfo[socket.id].lobbyName]
+
         if (socket.id === lobby.players[lobby.currentPlayer].id && lobby.optionPicked) {
-            io.to(socketToLobby[socket.id].lobbyName).emit('paint-start', data)
+            io.to(socketInfo[socket.id].lobbyName).emit('paint-start', data)
         }
     })
+
     socket.on('paint-continue', function(data) {
-        let lobby = lobbies[socketToLobby[socket.id].lobbyName]
+        let lobby = lobbies[socketInfo[socket.id].lobbyName]
+
         if (socket.id === lobby.players[lobby.currentPlayer].id && lobby.optionPicked) {
-            io.to(socketToLobby[socket.id].lobbyName).emit('paint-continue', data)
+            io.to(socketInfo[socket.id].lobbyName).emit('paint-continue', data)
         }
     })
-    //-----------------------------------------------------------------------------------------
 })
