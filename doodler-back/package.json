@@ -1,5 +1,5 @@
 {
-  "name": "doodler",
+  "name": "doodler-back",
   "version": "1.0.0",
   "description": "A drawing and guessing multiplayer web application",
   "main": "app.js",
