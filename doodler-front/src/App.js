@@ -70,7 +70,7 @@ const DrawingCanvas = ({ words }) => {
     })
 
     socket.on('update-timer', (data) => {
-      handleTimerStatement(data.time_message)
+      handleTimerStatement(data.timeMessage)
     })
 
     socket.on('clear-choice-and-timer', () => {
