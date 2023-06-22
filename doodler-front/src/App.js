@@ -8,7 +8,7 @@ import NewLobbyForm from './components/NewLobbyForm'
 import LobbyList from './components/LobbyList'
 import socketClient from "socket.io-client";
 
-let socket = socketClient("http://localhost:8000");
+let socket = socketClient("http://localhost:8080");
 
 const DrawingCanvas = ({ words }) => {
   let [mouseHeld, setMouseHeld] = useState(false)
