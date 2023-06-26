@@ -6,9 +6,20 @@ import Color from './components/Color'
 import Word from './components/Word'
 import NewLobbyForm from './components/NewLobbyForm'
 import LobbyList from './components/LobbyList'
-import socketClient from "socket.io-client";
+import io from "socket.io-client";
 
-let socket = socketClient("http://localhost:8080");
+// identifying where the server is hosted and connecting with socket
+let serverUrl
+let scheme = 'ws'
+let location = document.location
+
+if (location.protocol === 'https:') {
+  scheme += 's';
+}
+
+serverUrl = `${scheme}://${location.hostname}:${location.port}`;
+
+let socket = io(serverUrl);
 
 const DrawingCanvas = ({ words }) => {
   let [mouseHeld, setMouseHeld] = useState(false)
@@ -227,7 +238,6 @@ const App = () => {
     setLobbyRoundTime(event.target.value)
   }
   let handleCreateLobby = () => {
-    console.log(lobbyName)
     if (lobbyNumWords < 1 || lobbyNumWords > 4) {
       window.alert('invalid value for number of words')
     } else if (lobbyRoundTime < 5 || lobbyRoundTime > 300) {

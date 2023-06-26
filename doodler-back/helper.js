@@ -35,7 +35,7 @@ const generateWinnerMessage = (players) => {
 
     let winnerMessage = ''
     for (let i = 0; i < playersCopy.length; i++) {
-        let message = "#" + (i + 1).toString() + ": " + playersCopy[i].name + ", " + playersCopy[i].points.toString() + " points. "
+        let message = "#" + (i + 1).toString() + ": " + playersCopy[i].username + ", " + playersCopy[i].points.toString() + " points. "
         winnerMessage += message
     }
 
