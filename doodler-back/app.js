@@ -2,7 +2,7 @@ const express = require('express')
 const socket = require('socket.io')
 const { generateWords, generateWinnerMessage, addMessage } = require('./helper')
 
-const port = 8080
+const port = process.env.PORT || "8080"
 const wordBank = [
     "baseball", "coffee", "apartment", "eyelash", "cushion", "pokemon", "artist",
     "bison", "restaurant", "moustache", "computer", "ladybug", "explosion", "boulder",
