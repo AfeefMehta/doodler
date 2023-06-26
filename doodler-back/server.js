@@ -13,6 +13,7 @@ let lobbies = {}
 let socketInfo = {}
 
 let app = express()
+app.use(express.static('build'))
 let server = app.listen(port)
 let io = socket(server)
 
